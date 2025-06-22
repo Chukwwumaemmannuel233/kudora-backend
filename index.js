@@ -2,10 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const pool = require("./db");
 const waitlistRoutes = require("./routes/waitlist");
+const adminRoutes = require("./routes/admin"); // or wherever you saved it
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/admin", adminRoutes);
+
 
 // Base route
 app.get("/", (req, res) => {
