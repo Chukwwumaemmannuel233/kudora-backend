@@ -34,11 +34,15 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM waitlist ORDER BY joined_at DESC");
-    res.json(result.rows);
+    res.status(200).json({
+      success: true,
+      data: result.rows,
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
+    console.error("Waitlist fetch error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 });
+
 
 module.exports = router;
