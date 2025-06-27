@@ -4,11 +4,12 @@ const pool = require("./db");
 const waitlistRoutes = require("./routes/waitlist");
 const adminRoutes = require("./routes/admin");
 const buyerRoutes = require("./routes/buyers");
+
+// ✅ Only the origin/domain — no route paths!
 const allowedOrigins = ["https://kudora.vercel.app"];
 
 const app = express();
 
-// ✅ Setup CORS once (at the top)
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -23,15 +24,12 @@ app.use(
   })
 );
 
-// ✅ Middleware
 app.use(express.json());
-
-// ✅ Routes
 app.use("/admin", adminRoutes);
 app.use("/buyers", buyerRoutes);
 app.use("/waitlist", waitlistRoutes);
 
-// ✅ Base route
+// ✅ Health check
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
