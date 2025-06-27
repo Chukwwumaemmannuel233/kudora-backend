@@ -14,6 +14,7 @@ router.post("/", async (req, res) => {
 
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
+      console.error("Waitlist INSERT error:", err);   // 👈 now you’ll see code & detail
     if (err.code === "23505") {
       // Unique violation
       return res.status(400).json({
