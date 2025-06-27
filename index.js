@@ -4,15 +4,22 @@ const pool = require("./db");
 const waitlistRoutes = require("./routes/waitlist");
 const adminRoutes = require("./routes/admin");
 const buyerRoutes = require("./routes/buyers");
+const allowedOrigins = ["https://kudora.vercel.app"];
 
 const app = express();
 
 // ✅ Setup CORS once (at the top)
 app.use(
   cors({
-    origin: ["https://kudora.vercel.app"],
-    methods: ["GET", "POST"],
-    credentials: false,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true,
   })
 );
 
