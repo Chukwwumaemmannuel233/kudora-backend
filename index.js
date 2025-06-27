@@ -5,8 +5,8 @@ const waitlistRoutes = require("./routes/waitlist");
 const adminRoutes = require("./routes/admin");
 const buyerRoutes = require("./routes/buyers");
 
-// ✅ Only the origin/domain — no route paths!
-const allowedOrigins = ["https://kudora.vercel.app"];
+// ✅ Allow just your Vercel frontend domain
+const allowedOrigins = ["https://kudora.vercel.app", "http://localhost:3000"];
 
 const app = express();
 
@@ -25,11 +25,12 @@ app.use(
 );
 
 app.use(express.json());
+
 app.use("/admin", adminRoutes);
 app.use("/buyers", buyerRoutes);
 app.use("/waitlist", waitlistRoutes);
 
-// ✅ Health check
+// ✅ Base test route
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
