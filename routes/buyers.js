@@ -23,7 +23,9 @@ router.post("/signup", async (req, res) => {
       id_front_url,
       id_back_url,
       selfie_url,
-      accepted_terms
+      accepted_terms,
+      privacy_accepted,
+      marketing_accepted,
     } = req.body;
 
     // Check if email or phone already exists
@@ -45,18 +47,18 @@ router.post("/signup", async (req, res) => {
         first_name, last_name, email, phone, password,
         street_address, city, state, province, zip_code, country,
         id_type, id_number, id_front_url, id_back_url, selfie_url,
-        accepted_terms
+        accepted_terms, privacy_accepted, marketing_accepted
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9, $10, $11,
         $12, $13, $14, $15, $16,
-        $17
+        $17, $18, $19
       )`,
       [
         first_name, last_name, email, phone, hashedPassword,
         street_address, city, state, province, zip_code, country,
         id_type, id_number, id_front_url, id_back_url, selfie_url,
-        accepted_terms
+        accepted_terms, privacy_accepted, marketing_accepted
       ]
     );
 
