@@ -12,10 +12,12 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "pg": "^8.16.2"
+    "pg": "^8.16.2",
+    "twilio": "^5.7.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
