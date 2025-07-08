@@ -2,6 +2,9 @@ const express = require("express")
 const router = express.Router()
 const pool = require("../db")
 const bcrypt = require("bcrypt")
+const multer = require("multer")
+const upload = multer({ storage: multer.memoryStorage() })
+
 
 // You'll need to install these packages:
 // npm install twilio cloudinary multer
@@ -196,22 +199,25 @@ router.post("/verify-sms-code", async (req, res) => {
 })
 
 // 📷 Upload Verification Image
-router.post("/upload-verification-image", async (req, res) => {
+router.post("/upload-verification-image", upload.single("file"), async (req, res) => {
   try {
-    const { imageData, imageType, userId } = req.body
+    const { imageType, userId } = req.body
+    const file = req.file
 
-    if (!imageData || !imageType) {
-      return res.status(400).json({ error: "Image data and type are required" })
+    if (!file || !imageType) {
+      return res.status(400).json({ error: "Image file and type are required" })
     }
 
     console.log(`📷 Uploading ${imageType} image for user ${userId}`)
 
+    // Convert buffer to base64
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`
+
     // Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(imageData, {
+    const uploadResult = await cloudinary.uploader.upload(base64Image, {
       folder: `kudora-verification/${imageType}`,
       resource_type: "image",
       format: "jpg",
-      quality: "auto:good",
       transformation: [{ width: 1000, height: 1000, crop: "limit" }, { quality: "auto:good" }],
     })
 
@@ -234,6 +240,7 @@ router.post("/upload-verification-image", async (req, res) => {
     res.status(500).json({ error: "Failed to upload image" })
   }
 })
+
 
 // 🏪 Buyer Signup Route
 router.post("/signup", async (req, res) => {
