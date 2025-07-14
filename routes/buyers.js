@@ -5,10 +5,8 @@ const bcrypt = require("bcrypt")
 const multer = require("multer")
 const upload = multer({ storage: multer.memoryStorage() })
 
-
 // You'll need to install these packages:
 // npm install twilio cloudinary multer
-
 const twilio = require("twilio") // For SMS
 const cloudinary = require("cloudinary").v2 // For image storage
 
@@ -26,13 +24,11 @@ cloudinary.config({
 router.post("/check-email", async (req, res) => {
   try {
     const { email } = req.body
-
     if (!email) {
       return res.status(400).json({ error: "Email is required" })
     }
 
     console.log(`🔍 Checking email availability: ${email}`)
-
     const existingEmail = await pool.query("SELECT id FROM buyers WHERE email = $1", [email])
 
     if (existingEmail.rows.length > 0) {
@@ -55,13 +51,11 @@ router.post("/check-email", async (req, res) => {
 router.post("/check-phone", async (req, res) => {
   try {
     const { phone } = req.body
-
     if (!phone) {
       return res.status(400).json({ error: "Phone is required" })
     }
 
     console.log(`🔍 Checking phone availability: ${phone}`)
-
     const existingPhone = await pool.query("SELECT id FROM buyers WHERE phone = $1", [phone])
 
     if (existingPhone.rows.length > 0) {
@@ -84,14 +78,12 @@ router.post("/check-phone", async (req, res) => {
 router.post("/send-sms-code", async (req, res) => {
   try {
     const { phone } = req.body
-
     if (!phone) {
       return res.status(400).json({ error: "Phone number is required" })
     }
 
     // Generate 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-
     // Set expiration time (10 minutes from now)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
@@ -99,8 +91,8 @@ router.post("/send-sms-code", async (req, res) => {
 
     // Check for existing verification attempts (rate limiting)
     const recentAttempts = await pool.query(
-      `SELECT COUNT(*) as count FROM phone_verifications 
-       WHERE phone = $1 AND expires_at > NOW() - INTERVAL '1 hour'`,
+      `SELECT COUNT(*) as count FROM phone_verifications
+        WHERE phone = $1 AND expires_at > NOW() - INTERVAL '1 hour'`,
       [phone],
     )
 
@@ -112,10 +104,10 @@ router.post("/send-sms-code", async (req, res) => {
 
     // Store verification code in your existing phone_verifications table
     await pool.query(
-      `INSERT INTO phone_verifications (phone, code, expires_at) 
-       VALUES ($1, $2, $3)
-       ON CONFLICT (phone) 
-       DO UPDATE SET code = $2, expires_at = $3`,
+      `INSERT INTO phone_verifications (phone, code, expires_at)
+        VALUES ($1, $2, $3)
+       ON CONFLICT (phone)
+        DO UPDATE SET code = $2, expires_at = $3`,
       [phone, verificationCode, expiresAt],
     )
 
@@ -130,7 +122,6 @@ router.post("/send-sms-code", async (req, res) => {
       })
 
       console.log(`✅ SMS sent successfully to ${phone}`)
-
       res.status(200).json({
         success: true,
         message: "Verification code sent successfully",
@@ -141,7 +132,6 @@ router.post("/send-sms-code", async (req, res) => {
       })
     } catch (twilioError) {
       console.error("❌ Twilio SMS error:", twilioError)
-
       if (process.env.NODE_ENV === "development") {
         res.status(200).json({
           success: true,
@@ -163,7 +153,6 @@ router.post("/send-sms-code", async (req, res) => {
 router.post("/verify-sms-code", async (req, res) => {
   try {
     const { phone, code } = req.body
-
     if (!phone || !code) {
       return res.status(400).json({ error: "Phone and code are required" })
     }
@@ -172,8 +161,8 @@ router.post("/verify-sms-code", async (req, res) => {
 
     // Check verification code in your phone_verifications table
     const verification = await pool.query(
-      `SELECT * FROM phone_verifications 
-       WHERE phone = $1 AND code = $2 AND expires_at > NOW()`,
+      `SELECT * FROM phone_verifications
+        WHERE phone = $1 AND code = $2 AND expires_at > NOW()`,
       [phone, code],
     )
 
@@ -186,7 +175,6 @@ router.post("/verify-sms-code", async (req, res) => {
     await pool.query(`DELETE FROM phone_verifications WHERE phone = $1`, [phone])
 
     console.log(`✅ Phone verified successfully: ${phone}`)
-
     res.status(200).json({
       success: true,
       message: "Phone verified successfully",
@@ -241,8 +229,7 @@ router.post("/upload-verification-image", upload.single("file"), async (req, res
   }
 })
 
-
-// 🏪 Buyer Signup Route
+// 🏪 UPDATED Buyer Signup Route with Plan Information
 router.post("/signup", async (req, res) => {
   try {
     const {
@@ -267,6 +254,10 @@ router.post("/signup", async (req, res) => {
       accepted_terms,
       privacy_accepted,
       marketing_accepted,
+      // 🆕 NEW PLAN FIELDS
+      selected_plan_id,
+      selected_plan_name,
+      selected_plan_price,
     } = req.body
 
     console.log("🏪 New buyer signup attempt:", {
@@ -276,6 +267,10 @@ router.post("/signup", async (req, res) => {
       last_name,
       is_captcha_verified,
       is_phone_verified,
+      // 🆕 Log plan information
+      selected_plan_id,
+      selected_plan_name,
+      selected_plan_price,
     })
 
     // Validate required fields
@@ -315,7 +310,6 @@ router.post("/signup", async (req, res) => {
 
     // Check if email or phone already exists
     const existingUser = await pool.query("SELECT * FROM buyers WHERE email = $1 OR phone = $2", [email, phone])
-
     if (existingUser.rows.length > 0) {
       const existing = existingUser.rows[0]
       const conflict = existing.email === email ? "email" : "phone"
@@ -332,7 +326,7 @@ router.post("/signup", async (req, res) => {
     const hasAllDocuments = id_front_url && id_back_url && selfie_url
     const status = hasAllDocuments ? "pending" : "incomplete"
 
-    // Insert new buyer
+    // 🆕 UPDATED INSERT with plan fields
     const result = await pool.query(
       `INSERT INTO buyers (
         first_name, last_name, email, phone, password,
@@ -340,6 +334,7 @@ router.post("/signup", async (req, res) => {
         id_type, id_number, id_front_url, id_back_url, selfie_url,
         is_phone_verified, is_captcha_verified, status,
         accepted_terms, privacy_accepted, marketing_accepted,
+        selected_plan_id, selected_plan_name, selected_plan_price,
         created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5,
@@ -347,8 +342,9 @@ router.post("/signup", async (req, res) => {
         $12, $13, $14, $15, $16,
         $17, $18, $19,
         $20, $21, $22,
+        $23, $24, $25,
         NOW(), NOW()
-      ) RETURNING id, email, first_name, last_name, status, is_captcha_verified, is_phone_verified`,
+      ) RETURNING id, email, first_name, last_name, status, is_captcha_verified, is_phone_verified, selected_plan_name, selected_plan_price`,
       [
         first_name,
         last_name,
@@ -372,6 +368,10 @@ router.post("/signup", async (req, res) => {
         accepted_terms,
         privacy_accepted,
         marketing_accepted,
+        // 🆕 Plan fields
+        selected_plan_id || null,
+        selected_plan_name || null,
+        selected_plan_price || 0,
       ],
     )
 
@@ -383,6 +383,9 @@ router.post("/signup", async (req, res) => {
       captcha_verified: newBuyer.is_captcha_verified,
       phone_verified: newBuyer.is_phone_verified,
       status: newBuyer.status,
+      // 🆕 Log plan info
+      plan_name: newBuyer.selected_plan_name,
+      plan_price: newBuyer.selected_plan_price,
     })
 
     res.status(201).json({
@@ -395,6 +398,11 @@ router.post("/signup", async (req, res) => {
         status: newBuyer.status,
         is_captcha_verified: newBuyer.is_captcha_verified,
         is_phone_verified: newBuyer.is_phone_verified,
+        // 🆕 Include plan info in response
+        selected_plan: {
+          name: newBuyer.selected_plan_name,
+          price: newBuyer.selected_plan_price,
+        },
       },
     })
   } catch (err) {
@@ -403,17 +411,17 @@ router.post("/signup", async (req, res) => {
   }
 })
 
-// 📋 Get Buyer Profile
+// 📋 UPDATED Get Buyer Profile with plan information
 router.get("/profile/:id", async (req, res) => {
   try {
     const { id } = req.params
-
     const buyer = await pool.query(
-      `SELECT id, first_name, last_name, email, phone, 
+      `SELECT id, first_name, last_name, email, phone,
               street_address, city, state, province, zip_code, country,
               id_type, id_number, id_front_url, id_back_url, selfie_url,
               is_phone_verified, is_captcha_verified, status,
               accepted_terms, privacy_accepted, marketing_accepted,
+              selected_plan_id, selected_plan_name, selected_plan_price,
               created_at, updated_at
        FROM buyers WHERE id = $1`,
       [id],
@@ -430,6 +438,53 @@ router.get("/profile/:id", async (req, res) => {
   }
 })
 
+// 🆕 NEW ROUTE: Update Buyer Plan
+router.put("/:id/plan", async (req, res) => {
+  try {
+    const { id } = req.params
+    const { selected_plan_id, selected_plan_name, selected_plan_price } = req.body
+
+    console.log(`📋 Updating plan for buyer ${id}:`, {
+      planId: selected_plan_id,
+      planName: selected_plan_name,
+      planPrice: selected_plan_price,
+    })
+
+    // Validate that buyer exists
+    const buyerCheck = await pool.query("SELECT id FROM buyers WHERE id = $1", [id])
+    if (buyerCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Buyer not found" })
+    }
+
+    // Update the buyer's plan
+    const result = await pool.query(
+      `UPDATE buyers 
+       SET selected_plan_id = $1, selected_plan_name = $2, selected_plan_price = $3, updated_at = NOW()
+       WHERE id = $4
+       RETURNING selected_plan_id, selected_plan_name, selected_plan_price`,
+      [selected_plan_id, selected_plan_name, selected_plan_price, id],
+    )
+
+    const updatedBuyer = result.rows[0]
+
+    console.log(`✅ Plan updated successfully for buyer ${id}`)
+
+    res.status(200).json({
+      success: true,
+      message: "Plan updated successfully",
+      buyer_id: id,
+      selected_plan: {
+        id: updatedBuyer.selected_plan_id,
+        name: updatedBuyer.selected_plan_name,
+        price: updatedBuyer.selected_plan_price,
+      },
+    })
+  } catch (err) {
+    console.error("❌ Update plan error:", err)
+    res.status(500).json({ error: "Internal server error" })
+  }
+})
+
 // ✅ Admin approve buyer
 router.patch("/:id/approve", async (req, res) => {
   try {
@@ -437,14 +492,13 @@ router.patch("/:id/approve", async (req, res) => {
     const { admin_notes } = req.body
 
     await pool.query(
-      `UPDATE buyers 
-       SET status = 'approved', admin_notes = $1, updated_at = NOW()
+      `UPDATE buyers
+        SET status = 'approved', admin_notes = $1, updated_at = NOW()
        WHERE id = $2`,
       [admin_notes || "Approved by admin", id],
     )
 
     console.log(`✅ Buyer ${id} approved`)
-
     res.status(200).json({
       success: true,
       message: "Buyer approved successfully",
@@ -462,14 +516,13 @@ router.patch("/:id/reject", async (req, res) => {
     const { admin_notes } = req.body
 
     await pool.query(
-      `UPDATE buyers 
-       SET status = 'rejected', admin_notes = $1, updated_at = NOW()
+      `UPDATE buyers
+        SET status = 'rejected', admin_notes = $1, updated_at = NOW()
        WHERE id = $2`,
       [admin_notes || "Rejected by admin", id],
     )
 
     console.log(`❌ Buyer ${id} rejected`)
-
     res.status(200).json({
       success: true,
       message: "Buyer rejected successfully",
@@ -480,20 +533,22 @@ router.patch("/:id/reject", async (req, res) => {
   }
 })
 
-// 🔍 Admin get all buyers with captcha status and phone verification expiry
+// 🔍 UPDATED Admin get all buyers with plan information
 router.get("/admin/all", async (req, res) => {
   try {
-    console.log("🔍 Admin fetching all buyers with verification info")
+    console.log("🔍 Admin fetching all buyers with verification and plan info")
 
-    // Get buyers with phone verification expiry time and captcha status
+    // Get buyers with phone verification expiry time, captcha status, and plan information
     const buyersQuery = await pool.query(
       `SELECT 
-        b.id, b.first_name, b.last_name, b.email, b.phone, 
+        b.id, b.first_name, b.last_name, b.email, b.phone,
         b.street_address, b.city, b.state, b.province, b.zip_code, b.country,
         b.id_type, b.id_number, b.id_front_url, b.id_back_url, b.selfie_url,
         b.is_phone_verified, b.is_captcha_verified, b.status,
         b.admin_notes, b.accepted_terms, b.privacy_accepted, b.marketing_accepted,
         b.created_at, b.updated_at,
+        -- 🆕 Plan information
+        b.selected_plan_id, b.selected_plan_name, b.selected_plan_price,
         -- Phone verification expiry info (secure - no codes)
         pv.expires_at as phone_code_expires_at,
         CASE 
@@ -530,9 +585,16 @@ router.get("/admin/all", async (req, res) => {
         phone_code_expires_at: buyer.phone_code_expires_at,
         minutes_until_expiry: Math.round(buyer.minutes_until_expiry || 0),
       },
+      // 🆕 Add plan summary
+      plan_info: {
+        plan_id: buyer.selected_plan_id,
+        plan_name: buyer.selected_plan_name,
+        plan_price: buyer.selected_plan_price,
+        has_plan: !!(buyer.selected_plan_id && buyer.selected_plan_name),
+      },
     }))
 
-    console.log(`✅ Retrieved ${buyers.length} buyers for admin with verification info`)
+    console.log(`✅ Retrieved ${buyers.length} buyers for admin with verification and plan info`)
 
     res.status(200).json({
       success: true,
@@ -552,7 +614,6 @@ router.post("/:id/resend-verification", async (req, res) => {
 
     // Get buyer phone
     const buyer = await pool.query("SELECT phone FROM buyers WHERE id = $1", [id])
-
     if (buyer.rows.length === 0) {
       return res.status(404).json({ error: "Buyer not found" })
     }
@@ -565,10 +626,10 @@ router.post("/:id/resend-verification", async (req, res) => {
 
     // Update phone_verifications table
     await pool.query(
-      `INSERT INTO phone_verifications (phone, code, expires_at) 
-       VALUES ($1, $2, $3)
-       ON CONFLICT (phone) 
-       DO UPDATE SET code = $2, expires_at = $3`,
+      `INSERT INTO phone_verifications (phone, code, expires_at)
+        VALUES ($1, $2, $3)
+       ON CONFLICT (phone)
+        DO UPDATE SET code = $2, expires_at = $3`,
       [phone, verificationCode, expiresAt],
     )
 
@@ -581,7 +642,6 @@ router.post("/:id/resend-verification", async (req, res) => {
       })
 
       console.log(`✅ Admin resent SMS to ${phone} for buyer ${id}`)
-
       res.status(200).json({
         success: true,
         message: "Verification code resent successfully",
@@ -590,7 +650,6 @@ router.post("/:id/resend-verification", async (req, res) => {
       })
     } catch (twilioError) {
       console.error("❌ Twilio error in admin resend:", twilioError)
-
       // For development, still return success
       if (process.env.NODE_ENV === "development") {
         res.status(200).json({
