@@ -12,9 +12,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // POST /waitlist - Add a new person to the waitlist
 router.post("/", async (req, res) => {
   const { name, email } = req.body;
+  const client = await pool.connect();
 
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
       "INSERT INTO waitlist (name, email, joined_at) VALUES ($1, $2, NOW()) RETURNING *",
       [name, email]
     );
@@ -47,9 +50,11 @@ router.post("/", async (req, res) => {
       `,
     });
 
+    await client.query("COMMIT");
     res.status(201).json({ success: true, data: user });
   } catch (err) {
-    console.error("Waitlist INSERT error:", err);
+    await client.query("ROLLBACK");
+    console.error("Waitlist error:", err);
 
     if (err.code === "23505") {
       return res.status(400).json({
@@ -61,6 +66,8 @@ router.post("/", async (req, res) => {
     }
 
     res.status(500).json({ success: false, message: "Server Error" });
+  } finally {
+    client.release();
   }
 });
 
