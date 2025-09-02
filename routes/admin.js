@@ -51,4 +51,3 @@ router.get("/buyers", async (req, res) => {
   }
 });
 
-module.exports = router;
