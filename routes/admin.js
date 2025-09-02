@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db"); // Make sure this is your PostgreSQL pool config
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const verifyAdmin = require("../middleware/verifyAdmin");
+
 
 // Load environment variables
 require("dotenv").config();
@@ -14,7 +17,6 @@ router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // 1. Fetch admin by username
     const result = await pool.query("SELECT * FROM admins WHERE username = $1", [username]);
 
     if (result.rows.length === 0) {
@@ -22,16 +24,15 @@ router.post("/login", async (req, res) => {
     }
 
     const admin = result.rows[0];
-
-    // 2. Compare password with stored hash
     const isMatch = await bcrypt.compare(password, admin.password_hash);
 
     if (!isMatch) {
       return res.status(401).json({ success: false, message: "Invalid username or password" });
     }
 
-    // 3. Success
-    res.json({ success: true, message: "Login successful" });
+    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+
+    res.json({ success: true, token });
   } catch (err) {
     console.error("Admin login error:", err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -40,7 +41,7 @@ router.post("/login", async (req, res) => {
 
 
 // ✅ APPROVE A BUYER
-router.patch("/buyers/:id/approve", async (req, res) => {
+router.patch("/buyers/:id/approve", verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query("UPDATE buyers SET status = 'approved' WHERE id = $1", [id]);
@@ -52,7 +53,7 @@ router.patch("/buyers/:id/approve", async (req, res) => {
 });
 
 // ✅ REJECT A BUYER
-router.patch("/buyers/:id/reject", async (req, res) => {
+router.patch("/buyers/:id/reject", verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query("UPDATE buyers SET status = 'rejected' WHERE id = $1", [id]);
@@ -64,7 +65,7 @@ router.patch("/buyers/:id/reject", async (req, res) => {
 });
 
 // ✅ GET ALL BUYERS
-router.get("/buyers", async (req, res) => {
+router.get("/buyers", verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM buyers ORDER BY created_at DESC");
     res.status(200).json(result.rows);
