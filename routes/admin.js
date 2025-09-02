@@ -1,20 +1,43 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db"); // Make sure this is your PostgreSQL pool config
+const bcrypt = require("bcrypt");
 
 // Load environment variables
 require("dotenv").config();
 
 // ✅ ADMIN LOGIN
-router.post("/login", (req, res) => {
-  const { password } = req.body;
 
-  if (password === process.env.ADMIN_PASSWORD) {
-    return res.json({ success: true });
+
+// ✅ ADMIN LOGIN with DB
+router.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    // 1. Fetch admin by username
+    const result = await pool.query("SELECT * FROM admins WHERE username = $1", [username]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: "Invalid username or password" });
+    }
+
+    const admin = result.rows[0];
+
+    // 2. Compare password with stored hash
+    const isMatch = await bcrypt.compare(password, admin.password_hash);
+
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid username or password" });
+    }
+
+    // 3. Success
+    res.json({ success: true, message: "Login successful" });
+  } catch (err) {
+    console.error("Admin login error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-
-  res.status(401).json({ success: false, message: "Invalid password" });
 });
+
 
 // ✅ APPROVE A BUYER
 router.patch("/buyers/:id/approve", async (req, res) => {
@@ -51,3 +74,4 @@ router.get("/buyers", async (req, res) => {
   }
 });
 
+module.exports = router;
