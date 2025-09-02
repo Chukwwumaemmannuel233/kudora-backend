@@ -1,19 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
 // Load environment variables
 require("dotenv").config();
 
-// Email transporter setup
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.ADMIN_EMAIL,
-    pass: process.env.ADMIN_EMAIL_PASSWORD,
-  },
-});
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // POST /waitlist - Add a new person to the waitlist
 router.post("/", async (req, res) => {
@@ -28,8 +22,8 @@ router.post("/", async (req, res) => {
     const user = result.rows[0];
 
     // ✅ Send confirmation email to the user
-    await transporter.sendMail({
-      from: '"Kudora Team" <no-reply@kudora.com>',
+    await resend.emails.send({
+      from: "Kudora Team <no-reply@kudora.com>",
       to: user.email,
       subject: "You're on the Kudora Waitlist!",
       html: `
@@ -40,11 +34,17 @@ router.post("/", async (req, res) => {
     });
 
     // ✅ Send notification email to the admin
-    await transporter.sendMail({
-      from: '"Kudora Alerts" <no-reply@kudora.com>',
+    await resend.emails.send({
+      from: "Kudora Alerts <no-reply@kudora.com>",
       to: process.env.ADMIN_EMAIL,
       subject: "New Waitlist Entry",
-      text: `Someone just joined the waitlist:\nName: ${user.name}\nEmail: ${user.email}`,
+      html: `
+        <p>Someone just joined the waitlist:</p>
+        <ul>
+          <li><strong>Name:</strong> ${user.name}</li>
+          <li><strong>Email:</strong> ${user.email}</li>
+        </ul>
+      `,
     });
 
     res.status(201).json({ success: true, data: user });

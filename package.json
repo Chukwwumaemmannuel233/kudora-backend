@@ -20,6 +20,7 @@
     "multer": "^2.0.1",
     "nodemailer": "^7.0.6",
     "pg": "^8.16.2",
+    "resend": "^6.0.2",
     "twilio": "^5.7.1"
   },
   "devDependencies": {
