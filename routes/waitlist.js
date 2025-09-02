@@ -25,8 +25,8 @@ router.post("/", async (req, res) => {
     const user = result.rows[0];
 
     // ✅ Send confirmation email to the user
-    await resend.emails.send({
-      from: "Kudora Team <no-reply@kudora.com>",
+    const userEmail = await resend.emails.send({
+      from: "onboarding@resend.dev", // ✅ Resend default sender
       to: user.email,
       subject: "You're on the Kudora Waitlist!",
       html: `
@@ -36,9 +36,11 @@ router.post("/", async (req, res) => {
       `,
     });
 
+    console.log("User email result:", userEmail);
+
     // ✅ Send notification email to the admin
-    await resend.emails.send({
-      from: "Kudora Alerts <no-reply@kudora.com>",
+    const adminEmail = await resend.emails.send({
+      from: "onboarding@resend.dev", // ✅ Resend default sender
       to: process.env.ADMIN_EMAIL,
       subject: "New Waitlist Entry",
       html: `
@@ -49,6 +51,8 @@ router.post("/", async (req, res) => {
         </ul>
       `,
     });
+
+    console.log("Admin email result:", adminEmail);
 
     await client.query("COMMIT");
     res.status(201).json({ success: true, data: user });
