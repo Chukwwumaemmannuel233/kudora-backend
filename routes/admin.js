@@ -75,4 +75,18 @@ router.get("/buyers", verifyAdmin, async (req, res) => {
   }
 });
 
+// ✅ GET ALL WAITLIST ENTRIES
+router.get("/waitlist", verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, email, joined_at FROM waitlist ORDER BY joined_at DESC"
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Fetch waitlist error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 module.exports = router;
