@@ -101,29 +101,29 @@ router.get("/count", async (req, res) => {
 });
 
 // GET /waitlist - Get the whole waitlist with a serial number column
-router.get("/", async (req, res) => {
-  const client = await pool.connect();
+// router.get("/", async (req, res) => {
+//   const client = await pool.connect();
 
-  try {
-    const result = await client.query(`
-      SELECT
-        ROW_NUMBER() OVER (ORDER BY joined_at ASC) AS serial,
-        id,
-        name,
-        email,
-        joined_at
-      FROM waitlist
-      ORDER BY joined_at ASC
-    `);
+//   try {
+//     const result = await client.query(`
+//       SELECT
+//         ROW_NUMBER() OVER (ORDER BY joined_at ASC) AS serial,
+//         id,
+//         name,
+//         email,
+//         joined_at
+//       FROM waitlist
+//       ORDER BY joined_at ASC
+//     `);
 
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error("❌ Error fetching waitlist:", err);
-    res.status(500).json({ success: false, message: "Server Error" });
-  } finally {
-    client.release();
-  }
-});
+//     res.json({ success: true, data: result.rows });
+//   } catch (err) {
+//     console.error("❌ Error fetching waitlist:", err);
+//     res.status(500).json({ success: false, message: "Server Error" });
+//   } finally {
+//     client.release();
+//   }
+// });
 
 
 module.exports = router;
