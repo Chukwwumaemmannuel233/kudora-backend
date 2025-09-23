@@ -75,18 +75,42 @@ router.get("/buyers", verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ GET ALL WAITLIST ENTRIES
 router.get("/waitlist", verifyAdmin, async (req, res) => {
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
-      "SELECT id, name, email, joined_at FROM waitlist ORDER BY joined_at DESC"
-    );
-    res.status(200).json(result.rows);
+    const result = await client.query(`
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY joined_at ASC) AS serial,
+        id,
+        name,
+        email,
+        joined_at
+      FROM waitlist
+      ORDER BY joined_at ASC
+    `);
+
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error("Fetch waitlist error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("❌ Error fetching waitlist:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  } finally {
+    client.release();
   }
 });
+
+// // ✅ GET ALL WAITLIST ENTRIES
+// router.get("/waitlist", verifyAdmin, async (req, res) => {
+//   try {
+//     const result = await pool.query(
+//       "SELECT id, name, email, joined_at FROM waitlist ORDER BY joined_at DESC"
+//     );
+//     res.status(200).json(result.rows);
+//   } catch (err) {
+//     console.error("Fetch waitlist error:", err);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
 
 
 module.exports = router;
